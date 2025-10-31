@@ -37,7 +37,7 @@ export default function QuestionForm({ token, onSaved, onCheck }){
             <option value="C">Section C</option>
           </select>
         </div>
-        <button className="btn btn-success" type="submit">Submit Question</button>
+        <button className="btn btn-success" type="submit">Submit</button>
       </form>
       {msg && <div className="mt-2 alert alert-info">{msg}</div>}
     </div>
