@@ -46,16 +46,6 @@ const twoMarkQs = allQuestions.filter(q => q.marks === 2);
 const fiveMarkQs = allQuestions.filter(q => q.marks === 5);
 
 
- function getCO(teacherEmail) {
-    switch (teacherEmail) {
-      case 'teacher1@gmail.com': return 'CO1';
-      case 'teacher2@gmail.com': return 'CO2';
-      case 'teacher3@gmail.com': return 'CO3';
-      case 'teacher4@gmail.com': return 'CO4';
-      case 'teacher5@gmail.com': return 'CO5';
-      default: return 'CO?';
-    }
-  }
 
 // --- SECTION A: 10 random 2-mark questions ---
 const sectionA = getRandomItems(twoMarkQs, 10);
@@ -164,7 +154,7 @@ for (let i = 0; i < 3; i++) {
       <h3>SECTION A (20 Marks)-(10*2) </h3>
       <ol>
         ${sectionA.map(q => `
-          <li>${q.questionText} <strong>(${q.marks}m) [${getCO(q.teacherID)}]</strong></li>
+          <li>${q.questionText} <strong>(${q.marks}m) [${q.co}]</strong></li>
         `).join('')}
       </ol>
     </section>
@@ -176,7 +166,7 @@ for (let i = 0; i < 3; i++) {
           <li>
             <strong>Q${i + 1}:</strong>
             <ul>
-              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${getCO(g.teacherID)}]</li>`).join('')}
+              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}]</li>`).join('')}
             </ul>
           </li>
         `).join('')}
@@ -190,7 +180,7 @@ for (let i = 0; i < 3; i++) {
           <li>
             <strong>Q${i + 1}:</strong>
             <ul>
-              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${getCO(g.teacherID)}]</li>`).join('')}
+              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}]</li>`).join('')}
             </ul>
           </li>
         `).join('')}

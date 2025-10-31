@@ -5,12 +5,13 @@ export default function QuestionForm({ token, onSaved, onCheck }){
   const [questionText, setQuestionText] = useState('');
   const [marks, setMarks] = useState(2);
   const [section, setSection] = useState('A');
+  const [co, setCo] = useState('');
   const [msg, setMsg] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
     try{
-      const res = await axios.post('http://localhost:5000/api/questions/submit', { questionText, marks: Number(marks), section }, { headers: { Authorization: 'Bearer '+token }});
+      const res = await axios.post('http://localhost:5000/api/questions/submit', { questionText, marks: Number(marks), co }, { headers: { Authorization: 'Bearer '+token }});
       setMsg(res.data.message || 'Saved');
       setQuestionText('');
       onSaved();
@@ -31,10 +32,12 @@ export default function QuestionForm({ token, onSaved, onCheck }){
             <option value="3">3 marks</option>
             <option value="5">5 marks</option>
           </select>
-          <select className="form-select" value={section} onChange={e=>setSection(e.target.value)}>
-            <option value="A">Section A</option>
-            <option value="B">Section B</option>
-            <option value="C">Section C</option>
+          <select className="form-select" value={co} onChange={(e) => setCo(e.target.value)}>
+            <option value="">Select CO</option>
+            <option value="CO1">CO1</option>
+            <option value="CO2">CO2</option>
+            <option value="CO3">CO3</option>
+            <option value="CO4">CO4</option>
           </select>
         </div>
         <button className="btn btn-success" type="submit">Submit</button>

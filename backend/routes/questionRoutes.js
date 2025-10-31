@@ -22,19 +22,42 @@ function auth(req, res, next){
 // submit a question
 router.post('/submit', auth, async (req, res) => {
   try {
-    const { questionText, marks, section } = req.body;
-    if (!questionText || !marks || !section) return res.status(400).json({ message: 'Missing fields' });
-    if (!['A','B','C'].includes(section)) return res.status(400).json({ message: 'Invalid section' });
-    const q = new Question({ teacherID: req.user.teacherID, questionText, marks, section });
+    const { questionText, marks, co } = req.body; // ✅ now using CO instead of section
+
+    if (!questionText || !marks || !co) {
+      return res.status(400).json({ message: 'Missing fields' });
+    }
+
+    // ✅ Automatically assign section based on marks
+    let section = '';
+    if (marks == 2) section = 'A';
+    if (marks==2||marks == 3 || marks == 5) section = 'B';
+    if(marks ==5) section = 'C'; // default fallback if marks don’t match any rule
+
+    // ✅ Create and save question
+    const q = new Question({
+      teacherID: req.user.teacherID,
+      questionText,
+      marks,
+      co,       // ✅ include CO
+      section,  // ✅ assigned automatically
+    });
+
     await q.save();
-    // mark teacher as submitted (optional: you can set a rule on number of questions)
-    await Teacher.updateOne({ teacherID: req.user.teacherID }, { hasSubmitted: true });
-    res.json({ message: 'Question saved' });
+
+    // ✅ Mark teacher as having submitted
+    await Teacher.updateOne(
+      { teacherID: req.user.teacherID },
+      { hasSubmitted: true }
+    );
+
+    res.json({ message: 'Question saved successfully', section });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error' });
   }
 });
+
 
 // fetch questions for logged-in teacher
 router.get('/my', auth, async (req, res) => {
