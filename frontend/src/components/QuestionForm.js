@@ -7,15 +7,17 @@ export default function QuestionForm({ token, onSaved, onCheck }){
   const [section, setSection] = useState('A');
   const [co, setCo] = useState('');
   const [k, setK] = useState('');
+  const [module, setModule] = useState('');
   const [msg, setMsg] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
     try{
-      const res = await axios.post('http://localhost:5000/api/questions/submit', { questionText, marks: Number(marks), co , k },
+      const res = await axios.post('http://localhost:5000/api/questions/submit', { questionText, marks: Number(marks), co , k ,module},
       { headers: { Authorization: 'Bearer '+token }});
       setMsg(res.data.message || 'Saved');
       setQuestionText('');
+      setModule('');
       onSaved();
       onCheck();
     }catch(err){
@@ -52,6 +54,15 @@ export default function QuestionForm({ token, onSaved, onCheck }){
             <option value="K5">K5</option>
 
           </select>
+        </div>
+        <div className="mb-2">
+          <input
+            type="text"
+            className="form-control"
+            placeholder="Enter module name"
+            value={module}
+            onChange={(e) => setModule(e.target.value)}
+          />
         </div>
         <button className="btn btn-success" type="submit">Submit</button>
       </form>

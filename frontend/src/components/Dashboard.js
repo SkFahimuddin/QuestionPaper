@@ -48,7 +48,7 @@ export default function Dashboard({ token, user, onLogout }){
       <hr />
       <h5>Your Questions</h5>
       <ul>
-        {myQuestions.map((q,i)=> <li key={i}>{q.questionText} - ({q.marks}m) - Section {q.section} [{q.co}][{q.k}]</li>)}
+        {myQuestions.map((q,i)=> <li key={i}>{q.questionText} - ({q.marks}m) - Section {q.section} [{q.co}][{q.k}]-[{q.module}]</li>)}
       </ul>
 
       <QuestionForm token={token} onSaved={fetchMy} onCheck={checkCan} />

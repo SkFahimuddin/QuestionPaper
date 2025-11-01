@@ -154,7 +154,7 @@ for (let i = 0; i < 3; i++) {
       <h3>SECTION A (20 Marks)-(10*2) </h3>
       <ol>
         ${sectionA.map(q => `
-          <li>${q.questionText} <strong>(${q.marks}m) [${q.co}] [${q.k}]</strong></li>
+          <li>${q.questionText} <strong>(${q.marks}m) [${q.co}] [${q.k}] </strong></li>
         `).join('')}
       </ol>
     </section>

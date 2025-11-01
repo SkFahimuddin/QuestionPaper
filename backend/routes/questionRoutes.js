@@ -22,7 +22,7 @@ function auth(req, res, next){
 // submit a question
 router.post('/submit', auth, async (req, res) => {
   try {
-    const { questionText, marks, co, k } = req.body; // ✅ now using CO instead of section
+    const { questionText, marks, co, k , module} = req.body; // ✅ now using CO instead of section
 
     if (!questionText || !marks || !co) {
       return res.status(400).json({ message: 'Missing fields' });
@@ -41,6 +41,7 @@ router.post('/submit', auth, async (req, res) => {
       marks,
       co,       // ✅ include CO
       k,
+      module,
       section,  // ✅ assigned automatically
     });
 

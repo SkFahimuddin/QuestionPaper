@@ -7,6 +7,7 @@ const QuestionSchema = new mongoose.Schema({
   section: { type: String, enum: ['A','B','C'], required: true },
   co: {type: String,required: true},
   k: {type: String ,required: true},
+  module:{type: String,required: true},
 });
 
 module.exports = mongoose.model('Question', QuestionSchema);
