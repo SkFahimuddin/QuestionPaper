@@ -154,7 +154,7 @@ for (let i = 0; i < 3; i++) {
       <h3>SECTION A (20 Marks)-(10*2) </h3>
       <ol>
         ${sectionA.map(q => `
-          <li>${q.questionText} <strong>(${q.marks}m) [${q.co}]</strong></li>
+          <li>${q.questionText} <strong>(${q.marks}m) [${q.co}] [${q.k}]</strong></li>
         `).join('')}
       </ol>
     </section>
@@ -166,7 +166,7 @@ for (let i = 0; i < 3; i++) {
           <li>
             <strong>Q${i + 1}:</strong>
             <ul>
-              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}]</li>`).join('')}
+              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}][${g.k}]</li>`).join('')}
             </ul>
           </li>
         `).join('')}
@@ -180,7 +180,7 @@ for (let i = 0; i < 3; i++) {
           <li>
             <strong>Q${i + 1}:</strong>
             <ul>
-              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}]</li>`).join('')}
+              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}][${g.k}]</li>`).join('')}
             </ul>
           </li>
         `).join('')}
