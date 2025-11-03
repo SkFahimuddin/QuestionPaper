@@ -56,7 +56,7 @@ export default function Dashboard({ token, user, onLogout }){
       <hr />
       <div>
         <button className="btn btn-primary" disabled={!canGenerate} onClick={generate}>
-          Generate Final Paper (enabled when all 5 teachers submitted)
+          Generate Final Paper
         </button>
         {!canGenerate && <div className="text-muted mt-2">Waiting for all teachers to submit.</div>}
       </div>
