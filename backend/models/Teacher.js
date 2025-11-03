@@ -4,6 +4,7 @@ const TeacherSchema = new mongoose.Schema({
   teacherID: { type: String, unique: true, required: true },
   name: { type: String, required: true },
   passwordHash: { type: String, required: true },
+  subject: { type: String, required: true },
   hasSubmitted: { type: Boolean, default: false }
 });
 

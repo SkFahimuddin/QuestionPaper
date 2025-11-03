@@ -34,6 +34,11 @@ router.post('/submit', auth, async (req, res) => {
     if (marks==2||marks == 3 || marks == 5) section = 'B';
     if(marks ==5) section = 'C'; // default fallback if marks don’t match any rule
 
+    const teacher = await Teacher.findOne({ teacherID: req.user.teacherID });
+    if (!teacher) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
     // ✅ Create and save question
     const q = new Question({
       teacherID: req.user.teacherID,
@@ -43,6 +48,7 @@ router.post('/submit', auth, async (req, res) => {
       k,
       module,
       section,  // ✅ assigned automatically
+      subject: teacher.subject,
     });
 
     await q.save();
@@ -63,13 +69,22 @@ router.post('/submit', auth, async (req, res) => {
 
 // fetch questions for logged-in teacher
 router.get('/my', auth, async (req, res) => {
-  const qs = await Question.find({ teacherID: req.user.teacherID });
+  const teacher = await Teacher.findOne({ teacherID: req.user.teacherID });
+  if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+
+  const qs = await Question.find({
+    teacherID: req.user.teacherID,
+    subject: teacher.subject, // ✅ Only fetch their subject questions
+  });
   res.json(qs);
 });
 
 // admin: get all questions
 router.get('/all', auth, async (req, res) => {
-  const qs = await Question.find({});
+ const teacher = await Teacher.findOne({ teacherID: req.user.teacherID });
+  if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+
+  const qs = await Question.find({ subject: teacher.subject });
   res.json(qs);
 });
 

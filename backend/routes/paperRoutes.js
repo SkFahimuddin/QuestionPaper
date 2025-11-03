@@ -29,12 +29,21 @@ router.get('/can-generate', auth, async (req, res) => {
 
 // generate paper (simple greedy selection to match format)
 router.get('/generate', auth, async (req, res) => {
-  const teachers = await Teacher.find({});
-  if (teachers.length === 0)return res.status(400).json({ message: 'No teachers registered' });
-  const allSubmitted = teachers.every(t => t.hasSubmitted);
-  if (!allSubmitted) return res.status(400).json({ message: 'All teachers must submit first' });
+  const teachers = await Teacher.findOne({ teacherID: req.user.teacherID });
+  if (!teachers) return res.status(404).json({ message: 'Teacher not found' });
 
-  const allQuestions = await Question.find({}).populate('teacherID', 'name');;
+  const subjectTeachers = await Teacher.find({ subject: teachers.subject });
+    if (subjectTeachers.length === 0)
+      return res.status(400).json({ message: `No teachers found for subject: ${teachers.subject}` });
+
+  const allSubmitted = subjectTeachers.every(t => t.hasSubmitted);
+   if (!allSubmitted)
+      return res.status(400).json({ message: `All teachers for ${teachers.subject} must submit first` });
+
+ const allQuestions = await Question.find({ subject: teachers.subject });
+
+    if (allQuestions.length === 0)
+      return res.status(400).json({ message: `No questions found for subject: ${teachers.subject}` });
   // Helper function to get random items from an array
 function getRandomItems(arr, count) {
   const shuffled = arr.sort(() => 0.5 - Math.random());

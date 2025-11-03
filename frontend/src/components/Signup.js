@@ -6,11 +6,12 @@ export default function Signup(){
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
+  const [subject, setSubject] = useState('');
 
   const submit = async (e) => {
     e.preventDefault();
     try{
-      const res = await axios.post('http://localhost:5000/api/auth/signup', { teacherID, name, password });
+      const res = await axios.post('http://localhost:5000/api/auth/signup', { teacherID, name, password ,subject});
       setMsg(res.data.message || 'Created');
     }catch(err){
       setMsg(err.response?.data?.message || 'Error');
@@ -23,6 +24,7 @@ export default function Signup(){
       <form onSubmit={submit}>
         <div className="mb-2"><input className="form-control" placeholder="Teacher ID" value={teacherID} onChange={e=>setTeacherID(e.target.value)} /></div>
         <div className="mb-2"><input className="form-control" placeholder="Name" value={name} onChange={e=>setName(e.target.value)} /></div>
+        <div className="mb-2"><input className="form-control" placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
         <div className="mb-2"><input type="password" className="form-control" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} /></div>
         <button className="btn btn-primary" type="submit">Create</button>
       </form>
