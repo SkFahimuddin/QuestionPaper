@@ -22,7 +22,7 @@ function auth(req, res, next){
 // check if all 5 teachers have submitted
 router.get('/can-generate', auth, async (req, res) => {
   const teachers = await Teacher.find({});
-  if (teachers.length < 5) return res.json({ canGenerate: false, reason: 'Less than 5 teachers registered' });
+   if (teachers.length === 0)return res.json({ canGenerate: false, reason: 'No teachers registered' });
   const all = teachers.every(t => t.hasSubmitted);
   res.json({ canGenerate: all });
 });
@@ -30,7 +30,7 @@ router.get('/can-generate', auth, async (req, res) => {
 // generate paper (simple greedy selection to match format)
 router.get('/generate', auth, async (req, res) => {
   const teachers = await Teacher.find({});
-  if (teachers.length < 5) return res.status(400).json({ message: 'Need 5 teachers registered' });
+  if (teachers.length === 0)return res.status(400).json({ message: 'No teachers registered' });
   const allSubmitted = teachers.every(t => t.hasSubmitted);
   if (!allSubmitted) return res.status(400).json({ message: 'All teachers must submit first' });
 
