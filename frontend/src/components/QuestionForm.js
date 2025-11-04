@@ -12,6 +12,13 @@ export default function QuestionForm({ token, onSaved, onCheck }){
 
   const submit = async (e) => {
     e.preventDefault();
+
+    const interrogativeRegex = /^(what|which|who|where|when|whom|whose|why|how)\b/i;
+    if (interrogativeRegex.test(questionText.trim())) {
+      setMsg("❌ Cannot accept interrogative questions (starting with what, which, who, where, how, etc.)");
+      return;
+    }
+
     try{
       const res = await axios.post('http://localhost:5000/api/questions/submit', { questionText, marks: Number(marks), co , k ,module},
       { headers: { Authorization: 'Bearer '+token }});
