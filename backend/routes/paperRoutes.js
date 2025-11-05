@@ -113,9 +113,10 @@ for (let i = 0; i < 3; i++) {
         margin: 0;
       }
       header h2 {
+        text-align: left;
         font-size: 20px;
         margin-top: 5px;
-        color: #555;
+        color: #000000ff;
       }
       section {
         background: #fff;
@@ -155,8 +156,14 @@ for (let i = 0; i < 3; i++) {
   </head>
   <body>
     <header>
-      <h1>BTECH CSE_AI</h1>
-      <h2>Question Paper</h2>
+      <h1>B.TECH (CSE & CSE_AI), END SEMESTER EXAMINATIONS</h1>
+      <h2>Subject name: ${teachers.subject} </h2>
+      
+      <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
+        <span>Full Marks: 80</span>
+        <span>Time Allotted: 3hrs</span>
+      </div>
+
     </header>
 
     <section>
