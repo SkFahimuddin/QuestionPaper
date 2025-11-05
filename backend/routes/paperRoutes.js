@@ -165,7 +165,11 @@ for (let i = 0; i < 3; i++) {
     </section>
 
     <section>
-      <h3 style="text-align: center;">Group A (20 Marks)-(10*2) </h3>
+      <h3 style="text-align: center;">Group A</h3>
+      <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
+        <span style="font-weight: bold;">(Answer all questions )</span>
+        <span>10*2=20</span>
+      </div>
       <ol>
         ${sectionA.map(q => `
           <li>${q.questionText} <strong>(${q.marks}m) [${q.co}] [${q.k}] </strong></li>
@@ -174,7 +178,11 @@ for (let i = 0; i < 3; i++) {
     </section>
 
     <section>
-      <h3 style="text-align: center;">Group B (30 Marks) — 3 Questions (5 + 3 + 2 )</h3>
+      <h3 style="text-align: center;">Group B</h3>
+      <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
+        <span style="font-weight: bold;">(Answer all questions )</span>
+        <span>5+3+2</span>
+      </div>
       <ol>
         ${sectionB.map((grp, i) => `
           <li>
@@ -188,7 +196,11 @@ for (let i = 0; i < 3; i++) {
     </section>
 
     <section>
-      <h3 style="text-align: center;" >Group C (30 Marks) — 3 Questions (5 + 5 )</h3>
+      <h3 style="text-align: center;">Group C</h3>
+      <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
+        <span style="font-weight: bold;">(Answer all questions )</span>
+        <span>5+5</span>
+      </div>
       <ol>
         ${sectionC.map((grp, i) => `
           <li>
