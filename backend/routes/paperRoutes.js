@@ -98,14 +98,13 @@ for (let i = 0; i < 3; i++) {
     <style>
       body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background: #f8f9fa;
+        background: #ffffffff;
         margin: 40px;
         color: #333;
       }
       header {
         text-align: center;
         margin-bottom: 40px;
-        border-bottom: 2px solid #000;
         padding-bottom: 10px;
       }
       header h1 {
@@ -120,11 +119,7 @@ for (let i = 0; i < 3; i++) {
       }
       section {
         background: #fff;
-        border: 1px solid #ddd;
-        border-radius: 12px;
         padding: 25px 30px;
-        margin-bottom: 30px;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.08);
       }
       h3 {
         border-bottom: 2px solid #808080ff;
@@ -165,9 +160,12 @@ for (let i = 0; i < 3; i++) {
       </div>
 
     </header>
+    <section style="border-top: 3px solid black;border-bottom: 3px solid black;">
+      <p style="margin-right: 10em;margin-left: 10em;text-align: center; font-weight: bolder;">The figures in the right margin indicate full marks. Time Alottcd: 3 hours Candidates are required to give their answer in their own words as far as applicable. Unless otherwise specified, the notations / symbols have their usual meanings. Use of non-programmable calculator is allowed. </p>
+    </section>
 
     <section>
-      <h3>SECTION A (20 Marks)-(10*2) </h3>
+      <h3 style="text-align: center;">Group A (20 Marks)-(10*2) </h3>
       <ol>
         ${sectionA.map(q => `
           <li>${q.questionText} <strong>(${q.marks}m) [${q.co}] [${q.k}] </strong></li>
@@ -176,7 +174,7 @@ for (let i = 0; i < 3; i++) {
     </section>
 
     <section>
-      <h3>SECTION B (30 Marks) — 3 Questions (5 + 3 + 2 )</h3>
+      <h3 style="text-align: center;">Group B (30 Marks) — 3 Questions (5 + 3 + 2 )</h3>
       <ol>
         ${sectionB.map((grp, i) => `
           <li>
@@ -190,7 +188,7 @@ for (let i = 0; i < 3; i++) {
     </section>
 
     <section>
-      <h3>SECTION C (30 Marks) — 3 Questions (5 + 5 )</h3>
+      <h3 style="text-align: center;" >Group C (30 Marks) — 3 Questions (5 + 5 )</h3>
       <ol>
         ${sectionC.map((grp, i) => `
           <li>
