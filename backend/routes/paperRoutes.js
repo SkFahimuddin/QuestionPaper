@@ -168,7 +168,7 @@ for (let i = 0; i < 3; i++) {
       <h3 style="text-align: center;">Group A</h3>
       <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
         <span style="font-weight: bold;">(Answer all questions )</span>
-        <span>10*2=20</span>
+        <span style="font-weight: bold;font-size:large" >10*2=20</span>
       </div>
       <ol>
         ${sectionA.map(q => `
@@ -181,12 +181,12 @@ for (let i = 0; i < 3; i++) {
       <h3 style="text-align: center;">Group B</h3>
       <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
         <span style="font-weight: bold;">(Answer all questions )</span>
-        <span>5+3+2</span>
+        <span style="font-weight: bold;font-size:large">10*3=30</span>
       </div>
       <ol>
         ${sectionB.map((grp, i) => `
           <li>
-            <strong>Q${i + 1}:</strong>
+            <strong style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;">Q${i + 1}: <span>5+3+2</span> </strong>
             <ul>
               ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}][${g.k}]</li>`).join('')}
             </ul>
@@ -199,12 +199,12 @@ for (let i = 0; i < 3; i++) {
       <h3 style="text-align: center;">Group C</h3>
       <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
         <span style="font-weight: bold;">(Answer all questions )</span>
-        <span>5+5</span>
+        <span style="font-weight: bold;font-size:large">10*3=30</span>
       </div>
       <ol>
         ${sectionC.map((grp, i) => `
           <li>
-            <strong>Q${i + 1}:</strong>
+            <strong style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;">Q${i + 1}: <span>5+5</span></strong>
             <ul>
               ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}][${g.k}]</li>`).join('')}
             </ul>
