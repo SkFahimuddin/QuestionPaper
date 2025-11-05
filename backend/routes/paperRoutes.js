@@ -172,7 +172,7 @@ for (let i = 0; i < 3; i++) {
       </div>
       <ol>
         ${sectionA.map(q => `
-          <li>${q.questionText} <strong>(${q.marks}m) [${q.co}] [${q.k}] </strong></li>
+          <li> <strong>[${q.co}] [${q.k}] </strong> ${q.questionText} <strong>(${q.marks}m)</strong></li>
         `).join('')}
       </ol>
     </section>
@@ -188,7 +188,7 @@ for (let i = 0; i < 3; i++) {
           <li>
             <strong style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;">Q${i + 1}: <span>5+3+2</span> </strong>
             <ul>
-              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}][${g.k}]</li>`).join('')}
+              ${grp.map(g => `<li><strong>[${g.co}][${g.k}]</strong> ${g.questionText} <strong>(${g.marks}m)</strong> </li>`).join('')}
             </ul>
           </li>
         `).join('')}
@@ -206,7 +206,7 @@ for (let i = 0; i < 3; i++) {
           <li>
             <strong style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;">Q${i + 1}: <span>5+5</span></strong>
             <ul>
-              ${grp.map(g => `<li>${g.questionText} (${g.marks}m) [${g.co}][${g.k}]</li>`).join('')}
+              ${grp.map(g => `<li><strong>[${g.co}][${g.k}]</strong>${g.questionText} <strong>(${g.marks}m)</strong> </li>`).join('')}
             </ul>
           </li>
         `).join('')}
