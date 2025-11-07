@@ -72,7 +72,7 @@ export default function Dashboard({ token, user, onLogout }){
           Generate Paper
         </button>
         <button className="btn btn-success" onClick={generateIndividual}>
-          Individual Paper
+          Generate Individual Paper
         </button>
         {!canGenerate && <div className="text-muted mt-2">Waiting for all teachers to submit.</div>}
       </div>
