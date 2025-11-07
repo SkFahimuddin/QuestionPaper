@@ -68,7 +68,7 @@ export default function Dashboard({ token, user, onLogout }){
 
       <hr />
       <div>
-        <button className="btn btn-primary" onClick={generate}>
+        <button className="btn btn-primary me-2" onClick={generate}>
           Generate Final Paper
         </button>
         <button className="btn btn-success" onClick={generateIndividual}>
