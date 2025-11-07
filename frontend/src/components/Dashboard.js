@@ -36,6 +36,19 @@ export default function Dashboard({ token, user, onLogout }){
     }
   }
 
+  async function generateIndividual(){
+    try{
+      const win = window.open('about:blank','_blank');
+      const res = await axios.get('http://localhost:5000/api/individual-paper/generate-individual-paper', { 
+        headers: { Authorization: 'Bearer '+token } 
+      });
+      win.document.write(res.data);
+      win.document.close();
+    }catch(err){
+      alert(err.response?.data?.message || 'Error generating individual paper');
+    }
+  }
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center">
@@ -55,8 +68,11 @@ export default function Dashboard({ token, user, onLogout }){
 
       <hr />
       <div>
-        <button className="btn btn-primary" disabled={!canGenerate} onClick={generate}>
+        <button className="btn btn-primary" onClick={generate}>
           Generate Final Paper
+        </button>
+        <button className="btn btn-success" onClick={generateIndividual}>
+          Individual Paper
         </button>
         {!canGenerate && <div className="text-muted mt-2">Waiting for all teachers to submit.</div>}
       </div>
