@@ -640,9 +640,6 @@ for (let i = 0; i < 3; i++) {
         margin: 0;
         padding: 20px;
       }
-      section {
-        page-break-inside: avoid;
-      }
     }
   \`;
   clonedDoc.head.appendChild(printStyle);
