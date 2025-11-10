@@ -517,14 +517,16 @@ for (let i = 0; i < 3; i++) {
         const questionText = selectedElement.querySelector('p').textContent;
         const metaInfo = selectedElement.querySelector('strong').textContent;
         
-        // Parse the meta info
-        const coMatch = metaInfo.match(/CO: ([^\]]+)/);
-        const kMatch = metaInfo.match(/K: ([^\]]+)/);
-        const marksMatch = metaInfo.match(/Marks: (\d+)/);
+        // Parse the meta info - Updated regex patterns
+        const coMatch = metaInfo.match(/\\[CO:\\s*([^\\]]+)\\]/);
+        const kMatch = metaInfo.match(/\\[K:\\s*([^\\]]+)\\]/);
+        const marksMatch = metaInfo.match(/\\[Marks:\\s*(\\d+)\\]/);
         
-        const co = coMatch ? coMatch[1] : '';
-        const k = kMatch ? kMatch[1] : '';
+        const co = coMatch ? coMatch[1].trim() : '';
+        const k = kMatch ? kMatch[1].trim() : '';
         const marks = marksMatch ? marksMatch[1] : '';
+
+        console.log('Extracted values:', { co, k, marks, metaInfo }); // Debug log
 
         // Update the question in the paper
         const questionTextSpan = targetElement.querySelector('.question-text');
@@ -534,7 +536,7 @@ for (let i = 0; i < 3; i++) {
           // Update CO and K levels
           const strongTags = targetElement.querySelectorAll('strong');
           if (strongTags[0]) {
-            strongTags[0].textContent = \`[\${co}] [\${k}] \`;
+            strongTags[0].textContent = '[' + co + '] [' + k + '] ';
           }
         }
 
