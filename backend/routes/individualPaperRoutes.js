@@ -626,9 +626,6 @@ router.get('/generate-individual-paper', auth, async (req, res) => {
         margin: 0;
         padding: 20px;
       }
-      section {
-        page-break-inside: avoid;
-      }
     }
   \`;
   clonedDoc.head.appendChild(printStyle);
