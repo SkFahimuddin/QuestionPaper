@@ -6,15 +6,15 @@ const Teacher = require('../models/Teacher');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'replace_this_with_a_secret';
 
-// signup - create teacher profile
+// signup - create teacher profile (no subject needed)
 router.post('/signup', async (req, res) => {
   try {
-    const { teacherID, name, password, subject } = req.body;
+    const { teacherID, name, password } = req.body;
     if (!teacherID || !name || !password) return res.status(400).json({ message: 'Missing fields' });
     const existing = await Teacher.findOne({ teacherID });
     if (existing) return res.status(400).json({ message: 'TeacherID already exists' });
     const hash = await bcrypt.hash(password, 10);
-    const t = new Teacher({ teacherID, name, passwordHash: hash , subject});
+    const t = new Teacher({ teacherID, name, passwordHash: hash });
     await t.save();
     res.json({ message: 'Teacher created' });
   } catch (err) {

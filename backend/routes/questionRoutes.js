@@ -19,46 +19,44 @@ function auth(req, res, next){
   }
 }
 
+// Get all unique subjects for a teacher
+router.get('/subjects', auth, async (req, res) => {
+  try {
+    const subjects = await Question.distinct('subject', { teacherID: req.user.teacherID });
+    res.json({ subjects });
+  } catch(err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // submit a question
 router.post('/submit', auth, async (req, res) => {
   try {
-    const { questionText, marks, co, k , module} = req.body; // ✅ now using CO instead of section
+    const { questionText, marks, co, k, module, subject } = req.body;
 
-    if (!questionText || !marks || !co) {
+    if (!questionText || !marks || !co || !subject) {
       return res.status(400).json({ message: 'Missing fields' });
     }
 
-    // ✅ Automatically assign section based on marks
+    // Automatically assign section based on marks
     let section = '';
     if (marks == 2) section = 'A';
     if (marks==2||marks == 3 || marks == 5) section = 'B';
-    if(marks ==5) section = 'C'; // default fallback if marks don’t match any rule
+    if(marks ==5) section = 'C';
 
-    const teacher = await Teacher.findOne({ teacherID: req.user.teacherID });
-    if (!teacher) {
-      return res.status(404).json({ message: 'Teacher not found' });
-    }
-
-    // ✅ Create and save question
     const q = new Question({
       teacherID: req.user.teacherID,
       questionText,
       marks,
-      co,       // ✅ include CO
+      co,
       k,
       module,
-      section,  // ✅ assigned automatically
-      subject: teacher.subject,
+      section,
+      subject,
     });
 
     await q.save();
-
-    // ✅ Mark teacher as having submitted
-    await Teacher.updateOne(
-      { teacherID: req.user.teacherID },
-      { hasSubmitted: true }
-    );
-
     res.json({ message: 'Question saved successfully', section });
   } catch (err) {
     console.error(err);
@@ -66,25 +64,30 @@ router.post('/submit', auth, async (req, res) => {
   }
 });
 
-
-// fetch questions for logged-in teacher
+// fetch questions for logged-in teacher (filtered by subject)
 router.get('/my', auth, async (req, res) => {
-  const teacher = await Teacher.findOne({ teacherID: req.user.teacherID });
-  if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+  const { subject } = req.query;
+  
+  if (!subject) {
+    return res.status(400).json({ message: 'Subject is required' });
+  }
 
   const qs = await Question.find({
     teacherID: req.user.teacherID,
-    subject: teacher.subject, // ✅ Only fetch their subject questions
+    subject: subject,
   });
   res.json(qs);
 });
 
-// admin: get all questions
+// admin: get all questions for a subject
 router.get('/all', auth, async (req, res) => {
- const teacher = await Teacher.findOne({ teacherID: req.user.teacherID });
-  if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
+  const { subject } = req.query;
+  
+  if (!subject) {
+    return res.status(400).json({ message: 'Subject is required' });
+  }
 
-  const qs = await Question.find({ subject: teacher.subject });
+  const qs = await Question.find({ subject });
   res.json(qs);
 });
 

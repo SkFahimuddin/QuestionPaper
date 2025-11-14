@@ -20,12 +20,29 @@ function auth(req, res, next) {
   }
 }
 
-// --- Check if all teachers have submitted ---
+// --- Check if teacher has enough questions ---
 router.get('/can-generate', auth, async (req, res) => {
-  const teachers = await Teacher.find({});
-  if (teachers.length === 0) return res.json({ canGenerate: false, reason: 'No teachers registered' });
-  const all = teachers.every(t => t.hasSubmitted);
-  res.json({ canGenerate: all });
+  const { subject } = req.query;
+  
+  if (!subject) {
+    return res.json({ canGenerate: false, reason: 'Subject is required' });
+  }
+
+  const questions = await Question.find({ 
+    teacherID: req.user.teacherID,
+    subject 
+  });
+
+  const twoMarkQs = questions.filter(q => q.marks === 2);
+  const threeMarkQs = questions.filter(q => q.marks === 3);
+  const fiveMarkQs = questions.filter(q => q.marks === 5);
+
+  const canGenerate = twoMarkQs.length >= 10 && threeMarkQs.length >= 3 && fiveMarkQs.length >= 9;
+  
+  res.json({ 
+    canGenerate,
+    reason: canGenerate ? null : `Not enough questions. Need: 10×2m (have ${twoMarkQs.length}), 3×3m (have ${threeMarkQs.length}), 9×5m (have ${fiveMarkQs.length})`
+  });
 });
 
 // NEW: API endpoint to search for replacement questions (individual teacher's questions only)
@@ -55,14 +72,23 @@ router.post('/search-replacements', auth, async (req, res) => {
 });
 
 router.get('/generate-individual-paper', auth, async (req, res) => {
+  const { subject } = req.query;
+  
+  if (!subject) {
+    return res.status(400).json({ message: 'Subject is required' });
+  }
+
   const teacher = await Teacher.findOne({ teacherID: req.user.teacherID });
   if (!teacher) return res.status(404).json({ message: 'Teacher not found' });
 
-  // ✅ Only get this teacher's own questions
-  const allQuestions = await Question.find({ teacherID: teacher.teacherID });
+  // ✅ Only get this teacher's own questions for the specified subject
+  const allQuestions = await Question.find({ 
+    teacherID: teacher.teacherID,
+    subject 
+  });
 
   if (allQuestions.length === 0)
-    return res.status(400).json({ message: `No questions found for ${teacher.teacherID}` });
+    return res.status(400).json({ message: `No questions found for ${subject}` });
 
   // Helper: pick random items
   function getRandomItems(arr, count) {
@@ -117,7 +143,7 @@ router.get('/generate-individual-paper', auth, async (req, res) => {
   <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Individual Question Paper</title>
+    <title>Individual Question Paper - ${subject}</title>
     <style>
       body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -273,7 +299,7 @@ router.get('/generate-individual-paper', auth, async (req, res) => {
   <body>
     <header>
       <h1>B.TECH (CSE & CSE_AI), END SEMESTER EXAMINATIONS</h1>
-      <h2>Subject name: ${teacher.subject} (Individual Paper)</h2>
+      <h2>Subject name: ${subject} (Individual Paper)</h2>
       
       <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
         <span>Full Marks: 80</span>
@@ -297,7 +323,7 @@ router.get('/generate-individual-paper', auth, async (req, res) => {
             <strong>[${q.co}] [${q.k}]</strong>
             <span class="question-text">${q.questionText}</span>
             <strong>(${q.marks}m)</strong>
-            <button class="replace-btn" onclick="openReplaceModal('${q._id}', '${teacher.subject}', '${q.module || ''}', '${q.co}', '${q.k}', ${q.marks}, 'q-a-${idx}')">Replace</button>
+            <button class="replace-btn" onclick="openReplaceModal('${q._id}', '${subject}', '${q.module || ''}', '${q.co}', '${q.k}', ${q.marks}, 'q-a-${idx}')">Replace</button>
           </li>
         `).join('')}
       </ol>
@@ -319,7 +345,7 @@ router.get('/generate-individual-paper', auth, async (req, res) => {
                   <strong>[${g.co}][${g.k}]</strong>
                   <span class="question-text">${g.questionText}</span>
                   <strong>(${g.marks}m)</strong>
-                  <button class="replace-btn" onclick="openReplaceModal('${g._id}', '${teacher.subject}', '${g.module || ''}', '${g.co}', '${g.k}', ${g.marks}, 'q-b-${i}-${gIdx}')">Replace</button>
+                  <button class="replace-btn" onclick="openReplaceModal('${g._id}', '${subject}', '${g.module || ''}', '${g.co}', '${g.k}', ${g.marks}, 'q-b-${i}-${gIdx}')">Replace</button>
                 </li>
               `).join('')}
             </ul>
@@ -344,7 +370,7 @@ router.get('/generate-individual-paper', auth, async (req, res) => {
                   <strong>[${g.co}][${g.k}]</strong>
                   <span class="question-text">${g.questionText}</span>
                   <strong>(${g.marks}m)</strong>
-                  <button class="replace-btn" onclick="openReplaceModal('${g._id}', '${teacher.subject}', '${g.module || ''}', '${g.co}', '${g.k}', ${g.marks}, 'q-c-${i}-${gIdx}')">Replace</button>
+                  <button class="replace-btn" onclick="openReplaceModal('${g._id}', '${subject}', '${g.module || ''}', '${g.co}', '${g.k}', ${g.marks}, 'q-c-${i}-${gIdx}')">Replace</button>
                 </li>
               `).join('')}
             </ul>
@@ -400,7 +426,7 @@ router.get('/generate-individual-paper', auth, async (req, res) => {
     <script>
       let currentQuestionId = null;
       let currentElementId = null;
-      let currentSubject = null;
+      let currentSubject = '${subject}';
       let selectedQuestion = null;
 
       function openReplaceModal(questionId, subject, module, co, k, marks, elementId) {
@@ -558,86 +584,74 @@ router.get('/generate-individual-paper', auth, async (req, res) => {
       }
 
       function generateFinalPaper() {
-  // Create a new window with the final paper
-  const finalWindow = window.open('', '_blank');
-  
-  // Clone the current document
-  const clonedDoc = document.cloneNode(true);
-  
-  // Remove all replace buttons
-  const replaceButtons = clonedDoc.querySelectorAll('.replace-btn');
-  replaceButtons.forEach(btn => btn.remove());
-  
-  // Remove the modal
-  const modal = clonedDoc.querySelector('#replaceModal');
-  if (modal) modal.remove();
-  
-  // Remove the generate button section
-  const buttonSection = clonedDoc.querySelector('div[style*="text-align: center"][style*="margin: 30px 0"]');
-  if (buttonSection) buttonSection.remove();
-  
-  // Remove all scripts (since they're not needed in final paper)
-  const scripts = clonedDoc.querySelectorAll('script');
-  scripts.forEach(script => script.remove());
-  
-  // Add print button and styling
-  const printSection = clonedDoc.createElement('div');
-  printSection.style.cssText = 'text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; page-break-inside: avoid;';
-  printSection.innerHTML = \`
-    <button onclick="window.print()" style="
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-      margin-right: 10px;
-    ">🖨️ Print Paper</button>
-    <button onclick="window.close()" style="
-      background: #6c757d;
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-    ">✖️ Close</button>
-  \`;
-  
-  const footer = clonedDoc.querySelector('footer');
-  if (footer) {
-    footer.parentNode.insertBefore(printSection, footer);
-  }
-  
-  // Add print-specific styles
-  const printStyle = clonedDoc.createElement('style');
-  printStyle.textContent = \`
-    @media print {
-      button {
-        display: none !important;
+        const finalWindow = window.open('', '_blank');
+        const clonedDoc = document.cloneNode(true);
+        
+        const replaceButtons = clonedDoc.querySelectorAll('.replace-btn');
+        replaceButtons.forEach(btn => btn.remove());
+        
+        const modal = clonedDoc.querySelector('#replaceModal');
+        if (modal) modal.remove();
+        
+        const buttonSection = clonedDoc.querySelector('div[style*="text-align: center"][style*="margin: 30px 0"]');
+        if (buttonSection) buttonSection.remove();
+        
+        const scripts = clonedDoc.querySelectorAll('script');
+        scripts.forEach(script => script.remove());
+        
+        const printSection = clonedDoc.createElement('div');
+        printSection.style.cssText = 'text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; page-break-inside: avoid;';
+        printSection.innerHTML = \`
+          <button onclick="window.print()" style="
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 10px;
+          ">🖨️ Print Paper</button>
+          <button onclick="window.close()" style="
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+          ">✖️ Close</button>
+        \`;
+        
+        const footer = clonedDoc.querySelector('footer');
+        if (footer) {
+          footer.parentNode.insertBefore(printSection, footer);
+        }
+        
+        const printStyle = clonedDoc.createElement('style');
+        printStyle.textContent = \`
+          @media print {
+            button {
+              display: none !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+            body {
+              margin: 0;
+              padding: 20px;
+            }
+          }
+        \`;
+        clonedDoc.head.appendChild(printStyle);
+        
+        finalWindow.document.write('<!DOCTYPE html>');
+        finalWindow.document.write(clonedDoc.documentElement.outerHTML);
+        finalWindow.document.close();
+        finalWindow.focus();
       }
-      .no-print {
-        display: none !important;
-      }
-      body {
-        margin: 0;
-        padding: 20px;
-      }
-    }
-  \`;
-  clonedDoc.head.appendChild(printStyle);
-  
-  // Write to new window
-  finalWindow.document.write('<!DOCTYPE html>');
-  finalWindow.document.write(clonedDoc.documentElement.outerHTML);
-  finalWindow.document.close();
-  
-  // Optional: Auto-focus the new window
-  finalWindow.focus();
-}
     </script>
   </body>
   </html>

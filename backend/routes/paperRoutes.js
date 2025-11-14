@@ -19,12 +19,27 @@ function auth(req, res, next){
   }
 }
 
-// check if all 5 teachers have submitted
+// check if enough teachers have submitted for a subject
 router.get('/can-generate', auth, async (req, res) => {
-  const teachers = await Teacher.find({});
-   if (teachers.length === 0)return res.json({ canGenerate: false, reason: 'No teachers registered' });
-  const all = teachers.every(t => t.hasSubmitted);
-  res.json({ canGenerate: all });
+  const { subject } = req.query;
+  
+  if (!subject) {
+    return res.json({ canGenerate: false, reason: 'Subject is required' });
+  }
+
+  // Check if we have enough questions for the subject
+  const questions = await Question.find({ subject });
+  const twoMarkQs = questions.filter(q => q.marks === 2);
+  const threeMarkQs = questions.filter(q => q.marks === 3);
+  const fiveMarkQs = questions.filter(q => q.marks === 5);
+
+  // Need: 10 (2-mark), 3 (3-mark), 9 (5-mark) = minimum
+  const canGenerate = twoMarkQs.length >= 10 && threeMarkQs.length >= 3 && fiveMarkQs.length >= 9;
+  
+  res.json({ 
+    canGenerate,
+    reason: canGenerate ? null : `Not enough questions. Need: 10×2m (have ${twoMarkQs.length}), 3×3m (have ${threeMarkQs.length}), 9×5m (have ${fiveMarkQs.length})`
+  });
 });
 
 // NEW: API endpoint to search for replacement questions
@@ -50,72 +65,60 @@ router.post('/search-replacements', auth, async (req, res) => {
 
 // generate paper (simple greedy selection to match format)
 router.get('/generate', auth, async (req, res) => {
-  const teachers = await Teacher.findOne({ teacherID: req.user.teacherID });
-  if (!teachers) return res.status(404).json({ message: 'Teacher not found' });
+  const { subject } = req.query;
+  
+  if (!subject) {
+    return res.status(400).json({ message: 'Subject is required' });
+  }
 
-  const subjectTeachers = await Teacher.find({ subject: teachers.subject });
-    if (subjectTeachers.length === 0)
-      return res.status(400).json({ message: `No teachers found for subject: ${teachers.subject}` });
+  const allQuestions = await Question.find({ subject });
 
-  const allSubmitted = subjectTeachers.every(t => t.hasSubmitted);
-   if (!allSubmitted)
-      return res.status(400).json({ message: `All teachers for ${teachers.subject} must submit first` });
+  if (allQuestions.length === 0) {
+    return res.status(400).json({ message: `No questions found for subject: ${subject}` });
+  }
 
- const allQuestions = await Question.find({ subject: teachers.subject });
-
-    if (allQuestions.length === 0)
-      return res.status(400).json({ message: `No questions found for subject: ${teachers.subject}` });
   // Helper function to get random items from an array
-function getRandomItems(arr, count) {
-  const shuffled = arr.sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
-}
+  function getRandomItems(arr, count) {
+    const shuffled = arr.sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+  }
 
-// Separate questions by marks
-const twoMarkQs = allQuestions.filter(q => q.marks === 2);
-const fiveMarkQs = allQuestions.filter(q => q.marks === 5);
+  // Separate questions by marks
+  const twoMarkQs = allQuestions.filter(q => q.marks === 2);
+  const fiveMarkQs = allQuestions.filter(q => q.marks === 5);
 
+  // --- SECTION A: 10 random 2-mark questions ---
+  const sectionA = getRandomItems(twoMarkQs, 10);
 
+  // --- SECTION B: 3 questions (each 5+3+2 marks) ---
+  const sectionB = [];
+  const threeMarkQs = allQuestions.filter(q => q.marks === 3);
+  const usedFivesB = getRandomItems(fiveMarkQs, 3);
+  const usedThreesB = getRandomItems(threeMarkQs, 3);
+  const remainingTwos = twoMarkQs.filter(q => !sectionA.includes(q));
+  const usedTwosB = getRandomItems(remainingTwos, 3);
 
-// --- SECTION A: 10 random 2-mark questions ---
-const sectionA = getRandomItems(twoMarkQs, 10);
+  for (let i = 0; i < 3; i++) {
+    const group = [usedFivesB[i], usedThreesB[i], usedTwosB[i]].filter(Boolean);
+    if (group.length === 3) sectionB.push(group);
+  }
 
-// --- SECTION B: 3 questions (each 5+3+2 marks) ---
-const sectionB = [];
+  // --- SECTION C: 3 questions (each 5+5 marks) ---
+  const remainingFives = fiveMarkQs.filter(q => !usedFivesB.includes(q));
+  const usedFivesC = getRandomItems(remainingFives, 6);
+  const sectionC = [];
+  for (let i = 0; i < 3; i++) {
+    const group = [usedFivesC[i * 2], usedFivesC[i * 2 + 1]].filter(Boolean);
+    if (group.length === 2) sectionC.push(group);
+  }
 
-const threeMarkQs = allQuestions.filter(q => q.marks === 3);
-const usedFivesB = getRandomItems(fiveMarkQs, 3);  // 3 five-mark questions
-const usedThreesB = getRandomItems(threeMarkQs, 3); // 3 three-mark questions
-const remainingTwos = twoMarkQs.filter(q => !sectionA.includes(q));
-const usedTwosB = getRandomItems(remainingTwos, 3); // 3 two-mark questions
-
-for (let i = 0; i < 3; i++) {
-  const group = [
-    usedFivesB[i],
-    usedThreesB[i],
-    usedTwosB[i]
-  ].filter(Boolean);
-  if (group.length === 3) sectionB.push(group);
-}
-
-
-// --- SECTION C: 3 questions (each 5+5 marks) ---
-const remainingFives = fiveMarkQs.filter(q => !usedFivesB.includes(q));
-const usedFivesC = getRandomItems(remainingFives, 6); // need 6 five-mark qs
-const sectionC = [];
-for (let i = 0; i < 3; i++) {
-  const group = [usedFivesC[i * 2], usedFivesC[i * 2 + 1]].filter(Boolean);
-  if (group.length === 2) sectionC.push(group);
-}
-
-
-  // Build a simple HTML view with replace functionality
+  // Build HTML (same as before, but with subject parameter)
   let html = `
   <!DOCTYPE html>
   <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <title>Question Paper</title>
+    <title>Question Paper - ${subject}</title>
     <style>
       body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -271,31 +274,31 @@ for (let i = 0; i < 3; i++) {
   <body>
     <header>
       <h1>B.TECH (CSE & CSE_AI), END SEMESTER EXAMINATIONS</h1>
-      <h2>Subject name: ${teachers.subject} </h2>
+      <h2>Subject name: ${subject}</h2>
       
       <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
         <span>Full Marks: 80</span>
         <span>Time Allotted: 3hrs</span>
       </div>
-
     </header>
+
     <section style="border-top: 3px solid black;border-bottom: 3px solid black;">
-      <p style="margin-right: 10em;margin-left: 10em;text-align: center; font-weight: bolder;">The figures in the right margin indicate full marks. Time Alottcd: 3 hours Candidates are required to give their answer in their own words as far as applicable. Unless otherwise specified, the notations / symbols have their usual meanings. Use of non-programmable calculator is allowed. </p>
+      <p style="margin-right: 10em;margin-left: 10em;text-align: center; font-weight: bolder;">The figures in the right margin indicate full marks. Time Allotted: 3 hours. Candidates are required to give their answer in their own words as far as applicable. Unless otherwise specified, the notations / symbols have their usual meanings. Use of non-programmable calculator is allowed.</p>
     </section>
 
     <section>
       <h3 style="text-align: center;">Group A</h3>
       <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
-        <span style="font-weight: bold;">(Answer all questions )</span>
-        <span style="font-weight: bold;font-size:large" >10*2=20</span>
+        <span style="font-weight: bold;">(Answer all questions)</span>
+        <span style="font-weight: bold;font-size:large">10*2=20</span>
       </div>
       <ol>
         ${sectionA.map((q, idx) => `
           <li id="q-a-${idx}"> 
-            <strong>[${q.co}] [${q.k}] </strong> 
+            <strong>[${q.co}] [${q.k}]</strong> 
             <span class="question-text">${q.questionText}</span> 
             <strong>(${q.marks}m)</strong>
-            <button class="replace-btn" onclick="openReplaceModal('${q._id}', '${teachers.subject}', '${q.module || ''}', '${q.co}', '${q.k}', ${q.marks}, 'q-a-${idx}')">Replace</button>
+            <button class="replace-btn" onclick="openReplaceModal('${q._id}', '${subject}', '${q.module || ''}', '${q.co}', '${q.k}', ${q.marks}, 'q-a-${idx}')">Replace</button>
           </li>
         `).join('')}
       </ol>
@@ -304,20 +307,20 @@ for (let i = 0; i < 3; i++) {
     <section>
       <h3 style="text-align: center;">Group B</h3>
       <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
-        <span style="font-weight: bold;">(Answer all questions )</span>
+        <span style="font-weight: bold;">(Answer all questions)</span>
         <span style="font-weight: bold;font-size:large">10*3=30</span>
       </div>
       <ol>
         ${sectionB.map((grp, i) => `
           <li>
-            <strong style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;">Q${i + 1}: <span>5+3+2</span> </strong>
+            <strong style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;">Q${i + 1}: <span>5+3+2</span></strong>
             <ul>
               ${grp.map((g, gIdx) => `
                 <li id="q-b-${i}-${gIdx}">
                   <strong>[${g.co}][${g.k}]</strong> 
                   <span class="question-text">${g.questionText}</span> 
                   <strong>(${g.marks}m)</strong>
-                  <button class="replace-btn" onclick="openReplaceModal('${g._id}', '${teachers.subject}', '${g.module || ''}', '${g.co}', '${g.k}', ${g.marks}, 'q-b-${i}-${gIdx}')">Replace</button>
+                  <button class="replace-btn" onclick="openReplaceModal('${g._id}', '${subject}', '${g.module || ''}', '${g.co}', '${g.k}', ${g.marks}, 'q-b-${i}-${gIdx}')">Replace</button>
                 </li>
               `).join('')}
             </ul>
@@ -329,7 +332,7 @@ for (let i = 0; i < 3; i++) {
     <section>
       <h3 style="text-align: center;">Group C</h3>
       <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
-        <span style="font-weight: bold;">(Answer all questions )</span>
+        <span style="font-weight: bold;">(Answer all questions)</span>
         <span style="font-weight: bold;font-size:large">10*3=30</span>
       </div>
       <ol>
@@ -342,7 +345,7 @@ for (let i = 0; i < 3; i++) {
                   <strong>[${g.co}][${g.k}]</strong>
                   <span class="question-text">${g.questionText}</span> 
                   <strong>(${g.marks}m)</strong>
-                  <button class="replace-btn" onclick="openReplaceModal('${g._id}', '${teachers.subject}', '${g.module || ''}', '${g.co}', '${g.k}', ${g.marks}, 'q-c-${i}-${gIdx}')">Replace</button>
+                  <button class="replace-btn" onclick="openReplaceModal('${g._id}', '${subject}', '${g.module || ''}', '${g.co}', '${g.k}', ${g.marks}, 'q-c-${i}-${gIdx}')">Replace</button>
                 </li>
               `).join('')}
             </ul>
@@ -371,7 +374,8 @@ for (let i = 0; i < 3; i++) {
         </div>
       </div>
     </div>
-     <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+
+    <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
       <button onclick="generateFinalPaper()" style="
         background: #28a745;
         color: white;
@@ -398,7 +402,7 @@ for (let i = 0; i < 3; i++) {
     <script>
       let currentQuestionId = null;
       let currentElementId = null;
-      let currentSubject = null;
+      let currentSubject = '${subject}';
       let selectedQuestion = null;
 
       function openReplaceModal(questionId, subject, module, co, k, marks, elementId) {
@@ -427,7 +431,6 @@ for (let i = 0; i < 3; i++) {
         const k = document.getElementById('filterK').value;
         const marks = document.getElementById('filterMarks').value;
 
-        // Get token from localStorage
         const token = localStorage.getItem('token');
         
         if (!token) {
@@ -439,7 +442,6 @@ for (let i = 0; i < 3; i++) {
         document.getElementById('questionsList').innerHTML = '<p>Searching...</p>';
         
         try {
-          // Use full URL to ensure correct endpoint
           const response = await fetch('http://localhost:5000/api/paper/search-replacements', {
             method: 'POST',
             headers: {
@@ -494,23 +496,17 @@ for (let i = 0; i < 3; i++) {
       }
 
       function selectQuestion(questionId, element) {
-        // Remove previous selection
         document.querySelectorAll('.question-item').forEach(item => {
           item.classList.remove('selected');
         });
         
-        // Add selection to clicked item
         element.classList.add('selected');
         
-        // Store selected question data
-        const questions = Array.from(document.querySelectorAll('.question-item'));
-        const selectedIndex = questions.indexOf(element);
         selectedQuestion = {
           id: questionId,
           element: element
         };
 
-        // Add replace button if not exists
         if (!element.querySelector('.select-question-btn')) {
           const btn = document.createElement('button');
           btn.className = 'select-question-btn';
@@ -532,11 +528,9 @@ for (let i = 0; i < 3; i++) {
         const targetElement = document.getElementById(currentElementId);
         const selectedElement = selectedQuestion.element;
         
-        // Extract question data from selected element
         const questionText = selectedElement.querySelector('p').textContent;
         const metaInfo = selectedElement.querySelector('strong').textContent;
         
-        // Parse the meta info - Updated regex patterns
         const coMatch = metaInfo.match(/\\[CO:\\s*([^\\]]+)\\]/);
         const kMatch = metaInfo.match(/\\[K:\\s*([^\\]]+)\\]/);
         const marksMatch = metaInfo.match(/\\[Marks:\\s*(\\d+)\\]/);
@@ -545,14 +539,12 @@ for (let i = 0; i < 3; i++) {
         const k = kMatch ? kMatch[1].trim() : '';
         const marks = marksMatch ? marksMatch[1] : '';
 
-        console.log('Extracted values:', { co, k, marks, metaInfo }); // Debug log
+        console.log('Extracted values:', { co, k, marks, metaInfo });
 
-        // Update the question in the paper
         const questionTextSpan = targetElement.querySelector('.question-text');
         if (questionTextSpan) {
           questionTextSpan.textContent = questionText;
           
-          // Update CO and K levels
           const strongTags = targetElement.querySelectorAll('strong');
           if (strongTags[0]) {
             strongTags[0].textContent = '[' + co + '] [' + k + '] ';
@@ -563,7 +555,6 @@ for (let i = 0; i < 3; i++) {
         alert('Question replaced successfully!');
       }
 
-      // Close modal when clicking outside
       window.onclick = function(event) {
         const modal = document.getElementById('replaceModal');
         if (event.target == modal) {
@@ -572,86 +563,74 @@ for (let i = 0; i < 3; i++) {
       }
 
       function generateFinalPaper() {
-  // Create a new window with the final paper
-  const finalWindow = window.open('', '_blank');
-  
-  // Clone the current document
-  const clonedDoc = document.cloneNode(true);
-  
-  // Remove all replace buttons
-  const replaceButtons = clonedDoc.querySelectorAll('.replace-btn');
-  replaceButtons.forEach(btn => btn.remove());
-  
-  // Remove the modal
-  const modal = clonedDoc.querySelector('#replaceModal');
-  if (modal) modal.remove();
-  
-  // Remove the generate button section
-  const buttonSection = clonedDoc.querySelector('div[style*="text-align: center"][style*="margin: 30px 0"]');
-  if (buttonSection) buttonSection.remove();
-  
-  // Remove all scripts (since they're not needed in final paper)
-  const scripts = clonedDoc.querySelectorAll('script');
-  scripts.forEach(script => script.remove());
-  
-  // Add print button and styling
-  const printSection = clonedDoc.createElement('div');
-  printSection.style.cssText = 'text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; page-break-inside: avoid;';
-  printSection.innerHTML = \`
-    <button onclick="window.print()" style="
-      background: #007bff;
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-      margin-right: 10px;
-    ">🖨️ Print Paper</button>
-    <button onclick="window.close()" style="
-      background: #6c757d;
-      color: white;
-      border: none;
-      padding: 12px 30px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: bold;
-    ">✖️ Close</button>
-  \`;
-  
-  const footer = clonedDoc.querySelector('footer');
-  if (footer) {
-    footer.parentNode.insertBefore(printSection, footer);
-  }
-  
-  // Add print-specific styles
-  const printStyle = clonedDoc.createElement('style');
-  printStyle.textContent = \`
-    @media print {
-      button {
-        display: none !important;
+        const finalWindow = window.open('', '_blank');
+        const clonedDoc = document.cloneNode(true);
+        
+        const replaceButtons = clonedDoc.querySelectorAll('.replace-btn');
+        replaceButtons.forEach(btn => btn.remove());
+        
+        const modal = clonedDoc.querySelector('#replaceModal');
+        if (modal) modal.remove();
+        
+        const buttonSection = clonedDoc.querySelector('div[style*="text-align: center"][style*="margin: 30px 0"]');
+        if (buttonSection) buttonSection.remove();
+        
+        const scripts = clonedDoc.querySelectorAll('script');
+        scripts.forEach(script => script.remove());
+        
+        const printSection = clonedDoc.createElement('div');
+        printSection.style.cssText = 'text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px; page-break-inside: avoid;';
+        printSection.innerHTML = \`
+          <button onclick="window.print()" style="
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-right: 10px;
+          ">🖨️ Print Paper</button>
+          <button onclick="window.close()" style="
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+          ">✖️ Close</button>
+        \`;
+        
+        const footer = clonedDoc.querySelector('footer');
+        if (footer) {
+          footer.parentNode.insertBefore(printSection, footer);
+        }
+        
+        const printStyle = clonedDoc.createElement('style');
+        printStyle.textContent = \`
+          @media print {
+            button {
+              display: none !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+            body {
+              margin: 0;
+              padding: 20px;
+            }
+          }
+        \`;
+        clonedDoc.head.appendChild(printStyle);
+        
+        finalWindow.document.write('<!DOCTYPE html>');
+        finalWindow.document.write(clonedDoc.documentElement.outerHTML);
+        finalWindow.document.close();
+        finalWindow.focus();
       }
-      .no-print {
-        display: none !important;
-      }
-      body {
-        margin: 0;
-        padding: 20px;
-      }
-    }
-  \`;
-  clonedDoc.head.appendChild(printStyle);
-  
-  // Write to new window
-  finalWindow.document.write('<!DOCTYPE html>');
-  finalWindow.document.write(clonedDoc.documentElement.outerHTML);
-  finalWindow.document.close();
-  
-  // Optional: Auto-focus the new window
-  finalWindow.focus();
-}
     </script>
   </body>
   </html>
