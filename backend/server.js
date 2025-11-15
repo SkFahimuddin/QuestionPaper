@@ -18,11 +18,43 @@ app.use('/api/paper', paperRoutes);
 app.use('/api/individual-paper', individualPaperRoutes);
 
 const PORT = process.env.PORT || 5000;
-const MONGO = 'mongodb+srv://Fahim123:Fahim786@cluster0.rattrsg.mongodb.net/QuestionPaper' || 'mongodb://127.0.0.1:27017/QuestionPaper';
 
-mongoose.connect(MONGO, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(()=> {
-    console.log('Connected to MongoDB');
-    app.listen(PORT, ()=> console.log('Server running on port', PORT));
-  })
-  .catch(err => console.error(err));
+// Use LOCAL MongoDB
+const MONGO_URI = 'mongodb://127.0.0.1:27017/QuestionPaper';
+
+console.log('Connecting to local MongoDB...');
+
+mongoose.connect(MONGO_URI, { 
+  useNewUrlParser: true, 
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('✅ Connected to local MongoDB successfully');
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`🔗 http://localhost:${PORT}`);
+  });
+})
+.catch(err => {
+  console.error('❌ MongoDB connection failed:', err.message);
+  console.error('\n💡 Make sure MongoDB is running:');
+  console.error('   Windows: net start MongoDB');
+  console.error('   Or check Services → MongoDB');
+  process.exit(1);
+});
+
+// Connection event handlers
+mongoose.connection.on('error', (err) => {
+  console.error('MongoDB error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️  MongoDB disconnected');
+});
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  await mongoose.connection.close();
+  console.log('MongoDB connection closed');
+  process.exit(0);
+});
