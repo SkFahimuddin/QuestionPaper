@@ -1,19 +1,23 @@
 import React, {useState, useEffect} from 'react';
 import axios from 'axios';
 import QuestionForm from './QuestionForm';
+import FormatBuilder from './FormatBuilder';
 
 export default function Dashboard({ token, user, onLogout }){
   const [myQuestions, setMyQuestions] = useState([]);
-  const [canGenerate, setCanGenerate] = useState(false);
   const [currentSubject, setCurrentSubject] = useState('');
   const [subjects, setSubjects] = useState([]);
-  const [showSubjectModal, setShowSubjectModal] = useState(false);
-  const [generationType, setGenerationType] = useState(''); // 'combined' or 'individual'
+  const [formats, setFormats] = useState([]);
+  const [showFormatBuilder, setShowFormatBuilder] = useState(false);
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [selectedFormat, setSelectedFormat] = useState(null);
+  const [generationType, setGenerationType] = useState('');
+  const [editingFormat, setEditingFormat] = useState(null);
 
   useEffect(()=> {
     if (currentSubject) {
       fetchMy();
-      checkCan();
+      fetchFormats();
     }
     fetchSubjects();
   }, [currentSubject]);
@@ -39,36 +43,50 @@ export default function Dashboard({ token, user, onLogout }){
     }catch(err){ console.error(err); }
   }
 
-  async function checkCan(){
+  async function fetchFormats(){
     if (!currentSubject) return;
     try{
-      const res = await axios.get(`http://localhost:5000/api/paper/can-generate?subject=${currentSubject}`, { 
+      const res = await axios.get(`http://localhost:5000/api/formats/list?subject=${currentSubject}`, { 
         headers: { Authorization: 'Bearer '+token }
       });
-      setCanGenerate(res.data.canGenerate);
+      setFormats(res.data.formats || []);
     }catch(err){ console.error(err); }
   }
 
   function openGenerateModal(type) {
     setGenerationType(type);
-    setShowSubjectModal(true);
+    setShowGenerateModal(true);
   }
 
-  async function generatePaper(selectedSubject) {
+  async function generatePaper(formatId) {
     try{
       const endpoint = generationType === 'individual' 
-        ? 'http://localhost:5000/api/individual-paper/generate-individual-paper'
-        : 'http://localhost:5000/api/paper/generate';
+        ? 'http://localhost:5000/api/individual-paper/generate-with-format'
+        : 'http://localhost:5000/api/paper/generate-with-format';
       
       const win = window.open('about:blank','_blank');
-      const res = await axios.get(`${endpoint}?subject=${selectedSubject}`, { 
+      const res = await axios.get(`${endpoint}?subject=${currentSubject}&formatId=${formatId}`, { 
         headers: { Authorization: 'Bearer '+token } 
       });
       win.document.write(res.data);
       win.document.close();
-      setShowSubjectModal(false);
+      setShowGenerateModal(false);
     }catch(err){
       alert(err.response?.data?.message || 'Error generating paper');
+    }
+  }
+
+  async function deleteFormat(formatId) {
+    if (!window.confirm('Are you sure you want to delete this format?')) return;
+    
+    try {
+      await axios.delete(`http://localhost:5000/api/formats/${formatId}`, {
+        headers: { Authorization: 'Bearer '+token }
+      });
+      alert('Format deleted successfully');
+      fetchFormats();
+    } catch(err) {
+      alert(err.response?.data?.message || 'Error deleting format');
     }
   }
 
@@ -117,6 +135,76 @@ export default function Dashboard({ token, user, onLogout }){
 
       {currentSubject && (
         <>
+          {/* Format Management Section */}
+          <div className="mb-4 p-3" style={{backgroundColor: '#f8f9fa', borderRadius: '8px'}}>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h5 className="mb-0">Question Paper Formats</h5>
+              <button 
+                className="btn btn-primary btn-sm"
+                onClick={() => {
+                  setEditingFormat(null);
+                  setShowFormatBuilder(true);
+                }}
+              >
+                + Create New Format
+              </button>
+            </div>
+
+            {formats.length === 0 ? (
+              <p className="text-muted">No formats created yet. Create your first custom format!</p>
+            ) : (
+              <div className="row">
+                {formats.map((format) => (
+                  <div key={format._id} className="col-md-6 mb-3">
+                    <div className="card">
+                      <div className="card-body">
+                        <h6 className="card-title">
+                          {format.name}
+                          {format.isShared && <span className="badge bg-info ms-2">Shared</span>}
+                        </h6>
+                        <p className="card-text small text-muted mb-2">
+                          Total: {format.totalMarks} marks | Duration: {format.duration}
+                        </p>
+                        <p className="card-text small">
+                          <strong>Sections: {format.sections.length}</strong>
+                          {format.sections.map((s, i) => (
+                            <span key={i} className="d-block ms-2">
+                              • {s.name}: {s.totalMarks} marks
+                            </span>
+                          ))}
+                        </p>
+                        <div className="d-flex gap-2">
+                          {format.createdBy === user.teacherID && (
+                            <>
+                              <button 
+                                className="btn btn-sm btn-outline-primary"
+                                onClick={() => {
+                                  setEditingFormat(format);
+                                  setShowFormatBuilder(true);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => deleteFormat(format._id)}
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <hr />
+
+          {/* Questions Section */}
           <h5>Your Questions for {currentSubject}</h5>
           <ul>
             {myQuestions.map((q,i)=> (
@@ -129,25 +217,52 @@ export default function Dashboard({ token, user, onLogout }){
           <QuestionForm 
             token={token} 
             subject={currentSubject}
-            onSaved={fetchMy} 
-            onCheck={checkCan} 
+            onSaved={fetchMy}
           />
 
           <hr />
+
+          {/* Generate Paper Section */}
           <div>
-            <button className="btn btn-primary me-2" onClick={() => openGenerateModal('combined')}>
-              Generate Combined Paper
-            </button>
-            <button className="btn btn-success" onClick={() => openGenerateModal('individual')}>
-              Generate Individual Paper
-            </button>
-            {!canGenerate && <div className="text-muted mt-2">Waiting for all teachers to submit for this subject.</div>}
+            <h5>Generate Question Paper</h5>
+            {formats.length === 0 ? (
+              <p className="text-warning">⚠️ Please create at least one format before generating papers.</p>
+            ) : (
+              <div className="d-flex gap-2">
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => openGenerateModal('combined')}
+                >
+                  Generate Combined Paper
+                </button>
+                <button 
+                  className="btn btn-success"
+                  onClick={() => openGenerateModal('individual')}
+                >
+                  Generate Individual Paper
+                </button>
+              </div>
+            )}
           </div>
         </>
       )}
 
-      {/* Subject Selection Modal for Paper Generation */}
-      {showSubjectModal && (
+      {/* Format Builder Modal */}
+      {showFormatBuilder && (
+        <FormatBuilder
+          token={token}
+          subject={currentSubject}
+          existingFormat={editingFormat}
+          onClose={() => {
+            setShowFormatBuilder(false);
+            setEditingFormat(null);
+            fetchFormats();
+          }}
+        />
+      )}
+
+      {/* Format Selection Modal for Paper Generation */}
+      {showGenerateModal && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -164,25 +279,29 @@ export default function Dashboard({ token, user, onLogout }){
             backgroundColor: 'white',
             padding: '30px',
             borderRadius: '12px',
-            minWidth: '400px',
+            minWidth: '500px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.2)'
           }}>
-            <h5>Select Subject for Paper Generation</h5>
-            <p className="text-muted">Choose which subject's question paper to generate:</p>
+            <h5>Select Format for Paper Generation</h5>
+            <p className="text-muted">Choose which format to use:</p>
             <div className="d-flex flex-column gap-2 mt-3">
-              {subjects.map((subj, i) => (
+              {formats.map((format) => (
                 <button 
-                  key={i}
-                  className="btn btn-outline-primary"
-                  onClick={() => generatePaper(subj)}
+                  key={format._id}
+                  className="btn btn-outline-primary text-start"
+                  onClick={() => generatePaper(format._id)}
                 >
-                  {subj}
+                  <strong>{format.name}</strong>
+                  <br />
+                  <small className="text-muted">
+                    {format.totalMarks} marks | {format.sections.length} sections | {format.duration}
+                  </small>
                 </button>
               ))}
             </div>
             <button 
               className="btn btn-secondary mt-3 w-100" 
-              onClick={() => setShowSubjectModal(false)}
+              onClick={() => setShowGenerateModal(false)}
             >
               Cancel
             </button>
