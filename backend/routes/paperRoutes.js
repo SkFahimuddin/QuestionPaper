@@ -329,7 +329,7 @@ function generatePaperHTML(format, allQuestions, subject) {
     <body>
       <header>
         <h1>B.TECH (CSE & CSE_AI), END SEMESTER EXAMINATIONS</h1>
-        <h2>Subject: ${subject} - ${format.name}</h2>
+        <h2>Subject: ${subject}</h2>
         <div style="display: flex;justify-content: space-between;align-items: center;margin: 5px 20px 0 20px;font-size: 16px;color: #000;font-weight: 600;">
           <span>Full Marks: ${format.totalMarks}</span>
           <span>Time Allotted: ${format.duration}</span>
