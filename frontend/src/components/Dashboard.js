@@ -53,6 +53,12 @@ export default function Dashboard({ token, user, onLogout }){
     }catch(err){ console.error(err); }
   }
 
+  // This was missing - needed by QuestionForm component
+  async function checkCan(){
+    // This function can be empty or you can implement checking logic if needed
+    // The QuestionForm calls this after saving a question
+  }
+
   function openGenerateModal(type) {
     setGenerationType(type);
     setShowGenerateModal(true);
@@ -218,6 +224,7 @@ export default function Dashboard({ token, user, onLogout }){
             token={token} 
             subject={currentSubject}
             onSaved={fetchMy}
+            onCheck={checkCan}
           />
 
           <hr />

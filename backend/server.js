@@ -8,6 +8,7 @@ const questionRoutes = require('./routes/questionRoutes');
 const paperRoutes = require('./routes/paperRoutes');
 const individualPaperRoutes = require('./routes/individualPaperRoutes');
 const formatRoutes = require('./routes/formatRoutes');
+const aiQuestionRoutes = require('./routes/aiQuestionRoutes');
 
 const app = express();
 app.use(cors());
@@ -18,6 +19,7 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/paper', paperRoutes);
 app.use('/api/individual-paper', individualPaperRoutes);
 app.use('/api/formats', formatRoutes);
+app.use('/api/ai-questions', aiQuestionRoutes);
 
 const PORT = process.env.PORT || 5000;
 

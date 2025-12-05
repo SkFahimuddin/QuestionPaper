@@ -1,13 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const Question = require('../models/Question');
-const Teacher = require('../models/Teacher');
 const PaperFormat = require('../models/PaperFormat');
 const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'replace_this_with_a_secret';
 
-// --- Auth Middleware ---
 function auth(req, res, next) {
   const header = req.headers.authorization;
   if (!header) return res.status(401).json({ message: 'Unauthorized' });
@@ -21,7 +19,6 @@ function auth(req, res, next) {
   }
 }
 
-// --- Check if teacher has enough questions ---
 router.get('/can-generate', auth, async (req, res) => {
   const { subject } = req.query;
   
@@ -46,7 +43,7 @@ router.get('/can-generate', auth, async (req, res) => {
   });
 });
 
-// API endpoint to search for replacement questions (individual teacher's questions only)
+// Search both DB and AI questions
 router.post('/search-replacements', auth, async (req, res) => {
   try {
     const { subject, module, co, k, marks } = req.body;
@@ -55,7 +52,6 @@ router.post('/search-replacements', auth, async (req, res) => {
       return res.status(400).json({ message: 'Subject and marks are required' });
     }
 
-    // Only search within the teacher's own questions
     const query = { 
       teacherID: req.user.teacherID,
       subject, 
@@ -65,14 +61,17 @@ router.post('/search-replacements', auth, async (req, res) => {
     if (co) query.co = co;
     if (k) query.k = k;
 
-    const questions = await Question.find(query);
-    res.json({ questions });
+    const dbQuestions = await Question.find(query);
+    
+    res.json({ 
+      questions: dbQuestions,
+      hasAI: true // Indicates AI questions can be generated
+    });
   } catch (err) {
     res.status(500).json({ message: 'Error searching questions', error: err.message });
   }
 });
 
-// Generate individual paper with custom format
 router.get('/generate-with-format', auth, async (req, res) => {
   const { subject, formatId } = req.query;
   
@@ -86,7 +85,6 @@ router.get('/generate-with-format', auth, async (req, res) => {
       return res.status(404).json({ message: 'Format not found' });
     }
 
-    // Only get this teacher's own questions
     const allQuestions = await Question.find({ 
       subject,
       teacherID: req.user.teacherID 
@@ -104,14 +102,12 @@ router.get('/generate-with-format', auth, async (req, res) => {
   }
 });
 
-// Helper function to generate individual paper HTML based on format
 function generateIndividualPaperHTML(format, allQuestions, subject) {
   function getRandomItems(arr, count) {
     const shuffled = [...arr].sort(() => 0.5 - Math.random());
     return shuffled.slice(0, Math.min(count, arr.length));
   }
 
-  // Process each section
   const sectionsHTML = format.sections.map((section, sIndex) => {
     let sectionHTML = `
       <section>
@@ -127,7 +123,6 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
       const { marks, count, subQuestions } = questionType;
 
       if (subQuestions && subQuestions.length > 0) {
-        // Grouped questions (e.g., 5+3+2)
         const subMarksStr = subQuestions.map(sq => sq.marks).join('+');
         
         for (let i = 0; i < count; i++) {
@@ -159,7 +154,6 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
           sectionHTML += `</ul></li>`;
         }
       } else {
-        // Simple questions
         const availableQuestions = allQuestions.filter(q => q.marks === marks);
         const selected = getRandomItems(availableQuestions, count);
 
@@ -181,7 +175,6 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
     return sectionHTML;
   }).join('');
 
-  // Complete HTML with Replace Modal and Generate Final Paper
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -326,6 +319,23 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
           background: #d4edda;
           border-color: #28a745;
         }
+        .question-item.ai-question {
+          background: #fff3cd;
+          border-left: 4px solid #ffc107;
+        }
+        .question-item.ai-question:hover {
+          background: #ffe69c;
+        }
+        .ai-badge {
+          display: inline-block;
+          background: #ffc107;
+          color: #000;
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: bold;
+          margin-left: 8px;
+        }
         .select-question-btn {
           background: #28a745;
           color: white;
@@ -337,6 +347,45 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
         }
         .select-question-btn:hover {
           background: #218838;
+        }
+        .refresh-btn {
+          background: #17a2b8;
+          color: white;
+          border: none;
+          padding: 8px 16px;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-left: 10px;
+        }
+        .refresh-btn:hover {
+          background: #138496;
+        }
+        .tabs {
+          display: flex;
+          gap: 10px;
+          margin-bottom: 15px;
+          border-bottom: 2px solid #ddd;
+        }
+        .tab {
+          padding: 10px 20px;
+          cursor: pointer;
+          border: none;
+          background: none;
+          font-weight: 500;
+          color: #666;
+          border-bottom: 3px solid transparent;
+        }
+        .tab.active {
+          color: #007bff;
+          border-bottom-color: #007bff;
+        }
+        .tab:hover {
+          color: #0056b3;
+        }
+        .loading {
+          text-align: center;
+          padding: 20px;
+          color: #666;
         }
       </style>
     </head>
@@ -368,11 +417,16 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
             <input type="text" id="filterCO" placeholder="CO (optional)">
             <input type="text" id="filterK" placeholder="K Level (optional)">
             <input type="number" id="filterMarks" placeholder="Marks" readonly>
-            <button onclick="searchQuestions()">Search</button>
+            <button onclick="searchQuestions()">Search Database</button>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" onclick="switchTab('database')">Database Questions</button>
+            <button class="tab" onclick="switchTab('ai')">AI Generated Questions</button>
           </div>
 
           <div id="questionsList" class="question-list">
-            <p>Click "Search" to find replacement questions</p>
+            <p>Click "Search Database" to find replacement questions</p>
           </div>
         </div>
       </div>
@@ -406,11 +460,15 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
         let currentElementId = null;
         let currentSubject = '${subject}';
         let selectedQuestion = null;
+        let currentTab = 'database';
+        let aiQuestions = [];
+        let currentCriteria = {};
 
         function openReplaceModal(questionId, subject, module, co, k, marks, elementId) {
           currentQuestionId = questionId;
           currentElementId = elementId;
           currentSubject = subject;
+          currentCriteria = { module, co, k, marks };
           
           document.getElementById('filterModule').value = module;
           document.getElementById('filterCO').value = co;
@@ -418,13 +476,29 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
           document.getElementById('filterMarks').value = marks;
           
           document.getElementById('replaceModal').style.display = 'block';
-          document.getElementById('questionsList').innerHTML = '<p>Click "Search" to find replacement questions</p>';
+          document.getElementById('questionsList').innerHTML = '<p>Click "Search Database" to find replacement questions or switch to "AI Generated Questions" tab</p>';
           selectedQuestion = null;
+          currentTab = 'database';
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.tab')[0].classList.add('active');
         }
 
         function closeModal() {
           document.getElementById('replaceModal').style.display = 'none';
           selectedQuestion = null;
+          aiQuestions = [];
+        }
+
+        function switchTab(tab) {
+          currentTab = tab;
+          document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          event.target.classList.add('active');
+          
+          if (tab === 'database') {
+            searchQuestions();
+          } else {
+            generateAIQuestions();
+          }
         }
 
         async function searchQuestions() {
@@ -441,7 +515,7 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
             return;
           }
 
-          document.getElementById('questionsList').innerHTML = '<p>Searching...</p>';
+          document.getElementById('questionsList').innerHTML = '<div class="loading">Searching database...</div>';
           
           try {
             const response = await fetch('http://localhost:5000/api/individual-paper/search-replacements', {
@@ -467,12 +541,15 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
 
             const data = await response.json();
             
-            console.log('Received questions:', data.questions?.length || 0);
+            console.log('Database questions received:', data.questions); // Debug log
             
             if (data.questions && data.questions.length > 0) {
-              displayQuestions(data.questions.filter(q => q._id !== currentQuestionId));
+              // Filter out current question and display
+              const filteredQuestions = data.questions.filter(q => q._id !== currentQuestionId);
+              console.log('Displaying questions:', filteredQuestions); // Debug log
+              displayQuestions(filteredQuestions, false);
             } else {
-              document.getElementById('questionsList').innerHTML = '<p>No matching questions found</p>';
+              document.getElementById('questionsList').innerHTML = '<p>No matching questions found in database</p>';
             }
           } catch (error) {
             console.error('Error details:', error);
@@ -480,42 +557,137 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
           }
         }
 
-        function displayQuestions(questions) {
-          const listDiv = document.getElementById('questionsList');
+        async function generateAIQuestions() {
+          const token = localStorage.getItem('token');
           
-          if (questions.length === 0) {
-            listDiv.innerHTML = '<p>No other questions found with these criteria</p>';
+          if (!token) {
+            alert('Authentication required');
             return;
           }
 
-          listDiv.innerHTML = '<h3>Select a replacement question:</h3>' + 
-            questions.map(q => \`
-              <div class="question-item" onclick="selectQuestion('\${q._id}', '\${q.co}', '\${q.k}', this)" data-question-id="\${q._id}" data-co="\${q.co}" data-k="\${q.k}">
-                <strong>[CO: \${q.co}] [K: \${q.k}] [Module: \${q.module || 'N/A'}] [Marks: \${q.marks}]</strong>
-                <p>\${q.questionText}</p>
-              </div>
-            \`).join('');
+          const { module, co, k, marks } = currentCriteria;
+
+          document.getElementById('questionsList').innerHTML = '<div class="loading">🤖 AI is generating questions... Please wait...</div>';
+          
+          try {
+            const response = await fetch('http://localhost:5000/api/ai-questions/generate-questions', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+              },
+              body: JSON.stringify({
+                subject: currentSubject,
+                module: module || undefined,
+                co: co || undefined,
+                k: k || undefined,
+                marks: parseInt(marks),
+                count: 10
+              })
+            });
+
+            if (!response.ok) {
+              throw new Error('Failed to generate AI questions');
+            }
+
+            const data = await response.json();
+            aiQuestions = data.questions;
+            displayQuestions(aiQuestions, true);
+          } catch (error) {
+            console.error('AI Generation Error:', error);
+            document.getElementById('questionsList').innerHTML = 
+              '<p style="color: red;">Error generating AI questions: ' + error.message + 
+              '<br>Please check your OpenAI API key configuration.</p>';
+          }
         }
 
-        function selectQuestion(questionId, co, k, element) {
+        async function refreshAIQuestions() {
+          generateAIQuestions();
+        }
+
+        function displayQuestions(questions, isAI) {
+          const listDiv = document.getElementById('questionsList');
+          
+          console.log('Displaying questions:', questions.length, 'isAI:', isAI); // Debug
+          
+          if (!questions || questions.length === 0) {
+            listDiv.innerHTML = '<p>No questions found</p>';
+            return;
+          }
+
+          let html = '<div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">';
+          html += '<h3>Select a replacement question:</h3>';
+          
+          if (isAI) {
+            html += '<button class="refresh-btn" onclick="refreshAIQuestions()">🔄 Refresh AI Questions</button>';
+          }
+          
+          html += '</div>';
+          
+          questions.forEach((q, index) => {
+            // Escape quotes in question text for HTML
+            const escapedText = (q.questionText || '').replace(/'/g, "&#39;").replace(/"/g, '&quot;');
+            const displayText = (q.questionText || 'No text').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            html += \`
+              <div class="question-item \${q.isAI ? 'ai-question' : ''}" 
+                   id="question-item-\${index}"
+                   data-question-id="\${q._id || ''}" 
+                   data-co="\${q.co || ''}" 
+                   data-k="\${q.k || ''}"
+                   data-question-text="\${escapedText}"
+                   style="cursor: pointer;">
+                <strong>
+                  [CO: \${q.co || 'N/A'}] [K: \${q.k || 'N/A'}] [Module: \${q.module || 'N/A'}] [Marks: \${q.marks || 0}]
+                  \${q.isAI ? '<span class="ai-badge">AI Generated</span>' : ''}
+                </strong>
+                <p>\${displayText}</p>
+              </div>
+            \`;
+          });
+          
+          listDiv.innerHTML = html;
+          
+          // Add click listeners to all question items
+          questions.forEach((q, index) => {
+            const element = document.getElementById(\`question-item-\${index}\`);
+            if (element) {
+              element.onclick = function() {
+                const questionText = this.getAttribute('data-question-text');
+                const co = this.getAttribute('data-co');
+                const k = this.getAttribute('data-k');
+                const qId = this.getAttribute('data-question-id');
+                selectQuestion(qId, co, k, questionText, this);
+              };
+            }
+          });
+        }
+
+        function selectQuestion(questionId, co, k, questionText, element) {
+          // Remove selection from all items
           document.querySelectorAll('.question-item').forEach(item => {
             item.classList.remove('selected');
             const existingBtn = item.querySelector('.select-question-btn');
             if (existingBtn) existingBtn.remove();
           });
           
+          // Mark this item as selected
           element.classList.add('selected');
           
+          // Store selected question data
           selectedQuestion = {
             id: questionId,
             co: co,
             k: k,
+            text: questionText,
             element: element
           };
 
+          // Create and add "Use This Question" button
           const btn = document.createElement('button');
           btn.className = 'select-question-btn';
-          btn.textContent = 'Use This Question';
+          btn.textContent = '✓ Use This Question';
+          btn.style.marginTop = '10px';
           btn.onclick = (e) => {
             e.stopPropagation();
             replaceQuestion();
@@ -530,13 +702,10 @@ function generateIndividualPaperHTML(format, allQuestions, subject) {
           }
 
           const targetElement = document.getElementById(currentElementId);
-          const selectedElement = selectedQuestion.element;
           
-          const questionText = selectedElement.querySelector('p').textContent;
+          const questionText = selectedQuestion.text;
           const co = selectedQuestion.co;
           const k = selectedQuestion.k;
-
-          console.log('Replacing with:', { co, k, questionText });
 
           const questionTextSpan = targetElement.querySelector('.question-text');
           if (questionTextSpan) {
