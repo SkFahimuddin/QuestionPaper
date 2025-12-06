@@ -42,3 +42,6 @@ A simple project with Node.js + Express backend and React frontend for teachers 
 ## Notes
 - The backend uses a simple `hasSubmitted` flag per teacher once they submit a question (you can refine it to require a certain number/types of questions).
 - Paper generation logic is simple and naive: it attempts to pick 2-mark questions for Section A, groups of 5+5+2 for Section B, and pairs of 5+5 for Section C. You can improve the selection algorithm as needed.
+
+
+need to update login signin 
