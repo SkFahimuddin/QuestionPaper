@@ -99,7 +99,7 @@ export default function Dashboard({ token, user, onLogout }){
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center">
-        <div>Welcome, <strong>{user?.name || user?.teacherID}</strong></div>
+        <div style={{ color: "white" }} >Welcome, <strong>{user?.name || user?.teacherID}</strong></div>
         <div>
           <button className="btn btn-secondary me-2" onClick={onLogout}>Logout</button>
         </div>
@@ -109,7 +109,7 @@ export default function Dashboard({ token, user, onLogout }){
       
       {/* Subject Selection */}
       <div className="mb-4">
-        <h5>Select Subject</h5>
+        <h5 style={{ color: "white" }}>Select Subject</h5>
         <div className="d-flex gap-2 align-items-center">
           <select 
             className="form-select" 
@@ -123,7 +123,7 @@ export default function Dashboard({ token, user, onLogout }){
             ))}
           </select>
           <button 
-            className="btn btn-outline-primary btn-sm"
+            className="btn btn-outline-primary btn-sm" style={{ color: "#93a6fbff",border: "2px solid #93a6fbff" }}
             onClick={() => {
               const newSubject = prompt('Enter new subject name:');
               if (newSubject && newSubject.trim()) {
@@ -211,7 +211,7 @@ export default function Dashboard({ token, user, onLogout }){
           <hr />
 
           {/* Questions Section */}
-          <h5>Your Questions for {currentSubject}</h5>
+          <h5 style={{ color: "white" }}>Your Questions for {currentSubject}</h5>
           <ul>
             {myQuestions.map((q,i)=> (
               <li key={i}>
@@ -231,7 +231,7 @@ export default function Dashboard({ token, user, onLogout }){
 
           {/* Generate Paper Section */}
           <div>
-            <h5>Generate Question Paper</h5>
+            <h5 style={{ color: "white" }}>Generate Question Paper</h5>
             {formats.length === 0 ? (
               <p className="text-warning">⚠️ Please create at least one format before generating papers.</p>
             ) : (

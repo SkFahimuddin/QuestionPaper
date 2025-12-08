@@ -40,7 +40,7 @@ export default function QuestionForm({ token, subject, onSaved, onCheck }){
 
   return (
     <div>
-      <h5>Submit Question for {subject}</h5>
+      <h5 style={{ color: "white" }} >Submit Question for {subject}</h5>
       <form onSubmit={submit}>
         <div className="mb-2">
           <textarea 
