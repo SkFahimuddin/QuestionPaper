@@ -443,6 +443,18 @@ function generatePaperHTML(format, allQuestions, subject) {
         " onmouseover="this.style.background='#218838'" onmouseout="this.style.background='#28a745'">
           📄 Generate Final Question Paper
         </button>
+        <button onclick="window.close()" style="
+          background: #a72828ff;
+          color: white;
+          border: none;
+          padding: 15px 40px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 18px;
+          font-weight: bold;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          transition: all 0.3s;
+          "onmouseover="this.style.background='#642121ff'" onmouseout="this.style.background='#a72828ff'">✖️ Close</button>
         <p style="margin-top: 10px; color: #666; font-size: 14px;">
           Click to generate a clean version without replace buttons
         </p>
