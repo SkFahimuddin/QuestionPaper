@@ -30,7 +30,7 @@ function App() {
   if (token && user) {
     return (
       <div className="container">
-        <h1 style={{ color: "white" }}>📚 Question Paper App</h1>
+        <h1 style={{ color: "white" }}>📚 PaperX</h1>
         <Dashboard token={token} user={user} onLogout={onLogout} />
       </div>
     );
@@ -38,7 +38,7 @@ function App() {
 
   return (
     <div className="auth-container">
-      <h1 style={{ color: "white" }} >📚 Question Paper App</h1>
+      <h1 style={{ color: "white" }} >📚 PaperX</h1>
       
       <div className="auth-card">
         <div className="auth-tabs">
